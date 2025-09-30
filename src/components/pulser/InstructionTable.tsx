@@ -45,7 +45,7 @@ export function InstructionTable({
       }
     });
     setEditingValues(prev => ({ ...prev, ...newEditingValues }));
-  }, [instructions]);
+  }, [instructions, editingValues]);
 
   const addInstruction = () => {
     const newInstruction: PulseInstruction = {

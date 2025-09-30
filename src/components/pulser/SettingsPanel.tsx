@@ -47,7 +47,7 @@ export function SettingsPanel({ settings, onSettingsChange, instructions }: Sett
           </div>
           <Select 
             value={settings.timeScale} 
-            onValueChange={(value) => updateSetting('timeScale', value as any)}
+            onValueChange={(value) => updateSetting('timeScale', value as VisualizationSettings['timeScale'])}
           >
             <SelectTrigger>
               <SelectValue />
