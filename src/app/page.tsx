@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import ProgramEditor from '@/components/ProgramEditor';
 import TimelineView from '@/components/TimelineView';
-import { PBInstruction } from '@/types/pulse';
+import { PBInstruction } from '@/types/pulse0';
 import { instructionsToTimeline, validateProgram, calculateTotalDuration, formatDuration } from '@/lib/utils/pulseUtils';
 
 export default function Home() {

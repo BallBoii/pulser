@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PBInstruction } from '@/types/pulse';
+import { PBInstruction } from '@/types/pulse0';
 
 interface ProgramEditorProps {
   instructions: PBInstruction[];

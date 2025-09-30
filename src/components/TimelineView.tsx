@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TimelineSegment } from '@/types/pulse';
+import { TimelineSegment } from '@/types/pulse0';
 import { formatDuration } from '@/lib/utils/pulseUtils';
 import styles from './TimelineView.module.css';
 

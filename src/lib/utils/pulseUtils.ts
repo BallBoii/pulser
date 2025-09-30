@@ -1,4 +1,4 @@
-import { PBInstruction, TimelineSegment } from '@/types/pulse';
+import { PBInstruction, TimelineSegment } from '@/types/pulse0';
 
 // Unit conversion factors (to nanoseconds)
 const UNIT_SCALE = {
