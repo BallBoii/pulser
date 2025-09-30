@@ -64,13 +64,18 @@ export function InstructionTable({
     onInstructionsChange(instructions.filter(inst => inst.id !== id));
   };
 
-  const updateInstruction = (id: string, field: keyof PulseInstruction, value: any) => {
+  // Use a generic type for value to avoid 'any'
+  const updateInstruction = <K extends keyof PulseInstruction>(
+    id: string,
+    field: K,
+    value: PulseInstruction[K]
+  ) => {
     const updated = instructions.map(inst => {
       if (inst.id === id) {
         const updatedInst = { ...inst, [field]: value };
         // Update length when duration changes
         if (field === 'duration') {
-          updatedInst.length = value;
+          updatedInst.length = typeof value === 'number' ? value : inst.length;
         }
         return updatedInst;
       }
@@ -82,7 +87,10 @@ export function InstructionTable({
     if (field === 'displayTimeScale') {
       const instruction = instructions.find(inst => inst.id === id);
       if (instruction) {
-        const newFormattedValue = formatDurationInScale(instruction.duration, value);
+        const newFormattedValue = formatDurationInScale(
+          instruction.duration,
+          value as 'ns' | 'μs' | 'ms' | 's'
+        );
         setEditingValues(prev => ({
           ...prev,
           [id]: newFormattedValue
@@ -170,7 +178,11 @@ export function InstructionTable({
                   <TableCell>
                     <Select
                       value={instruction.opcode}
-                      onValueChange={(value) => updateInstruction(instruction.id, 'opcode', value)}
+                      onValueChange={(value) => updateInstruction(
+                        instruction.id,
+                        'opcode',
+                        value as PulseInstruction['opcode']
+                      )}
                     >
                       <SelectTrigger onClick={(e) => e.stopPropagation()}>
                         <SelectValue />
@@ -250,7 +262,11 @@ export function InstructionTable({
                     <div className="flex items-center gap-1">
                       <Select
                         value={getInstructionTimeScale(instruction)}
-                        onValueChange={(value) => updateInstruction(instruction.id, 'displayTimeScale', value)}
+                        onValueChange={(value) => updateInstruction(
+                          instruction.id,
+                          'displayTimeScale',
+                          value as PulseInstruction['displayTimeScale']
+                        )}
                       >
                         <SelectTrigger 
                           onClick={(e) => e.stopPropagation()}
@@ -272,7 +288,11 @@ export function InstructionTable({
                         onClick={(e) => {
                           e.stopPropagation();
                           const optimalScale = getOptimalTimeScale(instruction.duration);
-                          updateInstruction(instruction.id, 'displayTimeScale', optimalScale);
+                          updateInstruction(
+                            instruction.id,
+                            'displayTimeScale',
+                            optimalScale as PulseInstruction['displayTimeScale']
+                          );
                         }}
                         title="Auto-select optimal time scale"
                       >

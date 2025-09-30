@@ -14,6 +14,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ settings, onSettingsChange, instructions }: SettingsPanelProps) {
+  // Use a generic type for value to avoid 'any'
   const updateSetting = <K extends keyof VisualizationSettings>(
     key: K,
     value: VisualizationSettings[K]
