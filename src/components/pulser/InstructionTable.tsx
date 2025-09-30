@@ -44,8 +44,10 @@ export function InstructionTable({
         );
       }
     });
-    setEditingValues(prev => ({ ...prev, ...newEditingValues }));
-  }, [instructions, editingValues]);
+    if (Object.keys(newEditingValues).length > 0) {
+      setEditingValues(prev => ({ ...prev, ...newEditingValues }));
+    }
+  }, [instructions]);
 
   const addInstruction = () => {
     const newInstruction: PulseInstruction = {

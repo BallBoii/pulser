@@ -95,7 +95,7 @@ export function TimelineView({ instructions, settings, selectedInstructionId, on
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="w-full border rounded-lg max-h-96">
+        <ScrollArea className="w-full border rounded-lg max-h-screen">
           <div 
             className="relative bg-background"
             style={{ 
