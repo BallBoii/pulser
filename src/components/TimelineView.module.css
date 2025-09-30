@@ -1,0 +1,228 @@
+.timelineContainer {
+  width: 100%;
+  overflow-x: auto;
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  border: 1px solid #4b5563;
+}
+
+.timelineContent {
+  padding: 1rem;
+}
+
+.timelineTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.timeAxis {
+  position: relative;
+  height: 2rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #6b7280;
+  padding-left: 4rem;
+}
+
+.timeMarker {
+  position: absolute;
+  font-size: 0.75rem;
+  color: #d1d5db;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeMarkerText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeMarkerLine {
+  width: 100%;
+  height: 0.5rem;
+  border-left: 1px solid #6b7280;
+}
+
+.flagRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.flagLabel {
+  width: 4rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+  color: #d1d5db;
+  flex-shrink: 0;
+}
+
+.flagTrack {
+  position: relative;
+  height: 2rem;
+  flex: 1;
+  border: 1px solid #6b7280;
+  background-color: #4b5563;
+}
+
+.segment {
+  position: absolute;
+  height: 100%;
+  border-right: 1px solid #6b7280;
+  transition: background-color 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.segmentHigh {
+  background-color: #3b82f6;
+}
+
+.segmentHigh:hover {
+  background-color: #2563eb;
+}
+
+.segmentLow {
+  background-color: #6b7280;
+}
+
+.segmentLow:hover {
+  background-color: #9ca3af;
+}
+
+.opcodeRow {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.opcodeLabel {
+  width: 4rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+  color: #d1d5db;
+  flex-shrink: 0;
+}
+
+.opcodeTrack {
+  position: relative;
+  height: 2.5rem;
+  flex: 1;
+  border: 1px solid #6b7280;
+  background-color: #1f2937;
+}
+
+.opcodeSegment {
+  position: absolute;
+  height: 100%;
+  border-right: 1px solid #6b7280;
+  background-color: #374151;
+  transition: background-color 0.15s ease-in-out;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.opcodeSegment:hover {
+  background-color: #4b5563;
+}
+
+.opcodeText {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #f3f4f6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.25rem;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background-color: #000;
+  color: white;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  z-index: 10;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.segment:hover .tooltip,
+.opcodeSegment:hover .tooltip {
+  opacity: 1;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16rem;
+  background-color: #374151;
+  border-radius: 0.5rem;
+}
+
+.emptyStateText {
+  color: #9ca3af;
+}
+
+.timelineWrapper {
+  min-width: 100%;
+  position: relative;
+}
+
+.timeIndicator {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  z-index: 20;
+  width: 1px;
+  height: 100%;
+}
+
+.timeIndicatorLine {
+  width: 1px;
+  height: 100%;
+  background-color: #ef4444;
+  box-shadow: 0 0 3px rgba(239, 68, 68, 0.5);
+}
+
+.timeIndicatorLabel {
+  position: absolute;
+  top: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #000;
+  color: #ef4444;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  white-space: nowrap;
+  border: 1px solid #ef4444;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.timeAxisContent {
+  position: relative;
+}
+
+.timeIndicatorForTrack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #ef4444;
+  box-shadow: 0 0 3px rgba(239, 68, 68, 0.5);
+  pointer-events: none;
+  z-index: 10;
+}

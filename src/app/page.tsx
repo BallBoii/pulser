@@ -1,103 +1,217 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import ProgramEditor from '@/components/ProgramEditor';
+import TimelineView from '@/components/TimelineView';
+import { PBInstruction } from '@/types/pulse';
+import { instructionsToTimeline, validateProgram, calculateTotalDuration, formatDuration } from '@/lib/utils/pulseUtils';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [instructions, setInstructions] = useState<PBInstruction[]>([]);
+  const [timeScale, setTimeScale] = useState(1);
+  const [timeUnit, setTimeUnit] = useState<'ns' | 'us' | 'ms' | 's'>('us');
+  const [flagCount, setFlagCount] = useState(8);
+  const [showTiming, setShowTiming] = useState(true);
+  const [showOpcodes, setShowOpcodes] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const timeline = instructionsToTimeline(instructions);
+  const warnings = validateProgram(instructions);
+  const totalDuration = calculateTotalDuration(instructions);
+
+  return (
+    <div className="min-h-screen bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            PulseBlaster Visualizer
+          </h1>
+          <p className="text-gray-300">
+            Create and visualize pulse sequences for SpinCore PulseBlaster devices
+          </p>
+        </header>
+
+        {/* Controls */}
+        <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+          <h3 className="text-lg font-semibold mb-4 text-white">Visualization Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Time Scale
+              </label>
+              <div className="flex space-x-2">
+                <select
+                  value={timeUnit}
+                  onChange={(e) => setTimeUnit(e.target.value as 'ns' | 'us' | 'ms' | 's')}
+                  className="px-2 py-1 border border-gray-600 rounded bg-gray-700 text-white text-sm"
+                >
+                  <option value="ns">nanoseconds</option>
+                  <option value="us">microseconds</option>
+                  <option value="ms">milliseconds</option>
+                  <option value="s">seconds</option>
+                </select>
+              </div>
+              <input
+                type="range"
+                min={timeUnit === 'ns' ? '0.001' : timeUnit === 'us' ? '0.1' : timeUnit === 'ms' ? '10' : '1000'}
+                max={timeUnit === 'ns' ? '1' : timeUnit === 'us' ? '10' : timeUnit === 'ms' ? '100' : '10000'}
+                step={timeUnit === 'ns' ? '0.001' : timeUnit === 'us' ? '0.1' : timeUnit === 'ms' ? '1' : '100'}
+                value={timeScale}
+                onChange={(e) => setTimeScale(parseFloat(e.target.value))}
+                className="w-full"
+              />
+              <span className="text-sm text-gray-400">{timeScale.toFixed(timeUnit === 'ns' ? 3 : timeUnit === 'us' ? 1 : 0)} px/{timeUnit}</span>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Flag Count
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="24"
+                value={flagCount}
+                onChange={(e) => setFlagCount(parseInt(e.target.value) || 8)}
+                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={showTiming}
+                  onChange={(e) => setShowTiming(e.target.checked)}
+                  className="mr-2"
+                />
+                Show Timing
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={showOpcodes}
+                  onChange={(e) => setShowOpcodes(e.target.checked)}
+                  className="mr-2"
+                />
+                Show Opcodes
+              </label>
+            </div>
+
+            <div className="text-sm text-gray-300">
+              <div>Instructions: {instructions.length}</div>
+              <div>Total Duration: {formatDuration(totalDuration)}</div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 mb-6">
+            <h4 className="text-yellow-300 font-medium mb-2">⚠️ Program Warnings</h4>
+            <ul className="text-yellow-200 text-sm space-y-1">
+              {warnings.map((warning, index) => (
+                <li key={index}>• {warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Main content */}
+        <div className="space-y-6">
+          <ProgramEditor
+            instructions={instructions}
+            onInstructionsChange={setInstructions}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          
+          <TimelineView
+            segments={timeline}
+            flagCount={flagCount}
+            timeScale={timeScale}
+            timeUnit={timeUnit}
+            showTiming={showTiming}
+            showOpcodes={showOpcodes}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        {/* Export options */}
+        {instructions.length > 0 && (
+          <div className="mt-6 bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 className="text-lg font-semibold mb-4 text-white">Export</h3>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => {
+                  const data = JSON.stringify(instructions, null, 2);
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'pulse_program.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Export JSON
+              </button>
+              
+              <button
+                onClick={() => {
+                  const pythonCode = generatePythonCode(instructions);
+                  const blob = new Blob([pythonCode], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'pulse_program.py';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
+                Export Python
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function generatePythonCode(instructions: PBInstruction[]): string {
+  const instructionsCode = instructions.map(inst => {
+    const flags = Array.isArray(inst.flags) 
+      ? `[${inst.flags.join(', ')}]`
+      : typeof inst.flags === 'string'
+      ? `"${inst.flags}"`
+      : inst.flags;
+    
+    let code = `    PBInstruction(flags=${flags}, opcode="${inst.opcode}", data=${inst.data}, duration=${inst.duration}, units="${inst.units}"`;
+    
+    if (inst.freq0 !== undefined) code += `, freq0=${inst.freq0}`;
+    if (inst.phase0 !== undefined) code += `, phase0=${inst.phase0}`;
+    if (inst.amp0 !== undefined) code += `, amp0=${inst.amp0}`;
+    if (inst.freq1 !== undefined) code += `, freq1=${inst.freq1}`;
+    if (inst.phase1 !== undefined) code += `, phase1=${inst.phase1}`;
+    if (inst.amp1 !== undefined) code += `, amp1=${inst.amp1}`;
+    
+    code += `)`;
+    return code;
+  }).join(',\n');
+
+  return `# Generated pulse program
+from pulser import PulseBlaster, PBInstruction
+
+# Program instructions
+instructions = [
+${instructionsCode}
+]
+
+# Run the program
+with PulseBlaster(board=0, core_clock_MHz=100.0) as pb:
+    pb.program_pulse_program(instructions)
+    pb.start()
+    # Add your timing logic here
+    pb.stop()
+`;
 }
