@@ -3,8 +3,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Plus, Clock } from 'lucide-react';
+import { Trash2, Plus, Clock, GripVertical } from 'lucide-react';
 import { FlagInput } from './FlagInput';
+import { cn } from '@/components/ui/utils';
 import { 
   PulseInstruction, 
   OPCODE_OPTIONS, 
@@ -23,6 +24,239 @@ interface InstructionTableProps {
   onSelectInstruction: (id: string) => void;
 }
 
+interface DraggableRowProps {
+  instruction: PulseInstruction;
+  index: number;
+  startTime: number;
+  selectedInstructionId?: string;
+  settings: VisualizationSettings;
+  onSelectInstruction: (id: string) => void;
+  updateInstruction: (id: string, field: keyof PulseInstruction, value: any) => void;
+  removeInstruction: (id: string) => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDragEnd: () => void;
+  draggedIndex: number | null;
+  dragOverIndex: number | null;
+  getInstructionTimeScale: (instruction: PulseInstruction) => string;
+  formatDuration: (duration: number) => string;
+  editingValues: Record<string, string>;
+  setEditingValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}
+
+function DraggableRow({
+  instruction,
+  index,
+  startTime,
+  selectedInstructionId,
+  settings,
+  onSelectInstruction,
+  updateInstruction,
+  removeInstruction,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  draggedIndex,
+  dragOverIndex,
+  getInstructionTimeScale,
+  formatDuration,
+  editingValues,
+  setEditingValues
+}: DraggableRowProps) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', '');
+    onDragStart(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    onDragOver(index);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    onDragEnd();
+  };
+
+  const isDragging = draggedIndex === index;
+  const isDropTarget = dragOverIndex === index && draggedIndex !== null && draggedIndex !== index;
+
+  return (
+    <TableRow
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDrop={handleDrop}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "cursor-pointer transition-all",
+        selectedInstructionId === instruction.id && "bg-muted",
+        isDragging && "opacity-50",
+        isDropTarget && "border-t-2 border-primary"
+      )}
+      onClick={() => onSelectInstruction(instruction.id)}
+    >
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
+          {index + 1}
+        </div>
+      </TableCell>
+      <TableCell>
+        <FlagInput
+          value={instruction.flags}
+          onChange={(value) => updateInstruction(instruction.id, 'flags', value)}
+          maxFlags={settings.flagCount}
+          className="w-48"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </TableCell>
+      <TableCell>
+        <Select
+          value={instruction.opcode}
+          onValueChange={(value) => updateInstruction(instruction.id, 'opcode', value)}
+        >
+          <SelectTrigger onClick={(e) => e.stopPropagation()}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {OPCODE_OPTIONS.map(opcode => (
+              <SelectItem key={opcode} value={opcode}>
+                {opcode}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          value={instruction.data}
+          onChange={(e) => updateInstruction(instruction.id, 'data', parseInt(e.target.value) || 0)}
+          className="w-20"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="text"
+          value={editingValues[instruction.id] || formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction) as 'ns' | 'μs' | 'ms' | 's')}
+          onChange={(e) => {
+            setEditingValues(prev => ({
+              ...prev,
+              [instruction.id]: e.target.value
+            }));
+          }}
+          onBlur={(e) => {
+            const value = e.target.value;
+            if (value.trim() === '') {
+              // Reset to formatted value if empty
+              const formattedValue = formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction) as 'ns' | 'μs' | 'ms' | 's');
+              setEditingValues(prev => ({
+                ...prev,
+                [instruction.id]: formattedValue
+              }));
+              return;
+            }
+            
+            const numericValue = parseFloat(value);
+            if (isNaN(numericValue)) {
+              // Reset to formatted value if invalid
+              const formattedValue = formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction) as 'ns' | 'μs' | 'ms' | 's');
+              setEditingValues(prev => ({
+                ...prev,
+                [instruction.id]: formattedValue
+              }));
+              return;
+            }
+            
+            const timeScale = getInstructionTimeScale(instruction);
+            const durationNs = parseDurationFromScale(numericValue.toString(), timeScale as 'ns' | 'μs' | 'ms' | 's');
+            updateInstruction(instruction.id, 'duration', durationNs);
+            
+            // Update the editing value to the formatted version
+            const formattedValue = formatDurationInScale(durationNs, timeScale as 'ns' | 'μs' | 'ms' | 's');
+            setEditingValues(prev => ({
+              ...prev,
+              [instruction.id]: formattedValue
+            }));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          className="w-24"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          <Select
+            value={getInstructionTimeScale(instruction)}
+            onValueChange={(value) => updateInstruction(instruction.id, 'displayTimeScale', value)}
+          >
+            <SelectTrigger 
+              onClick={(e) => e.stopPropagation()}
+              className="w-16"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ns">ns</SelectItem>
+              <SelectItem value="μs">μs</SelectItem>
+              <SelectItem value="ms">ms</SelectItem>
+              <SelectItem value="s">s</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              const optimalScale = getOptimalTimeScale(instruction.duration);
+              updateInstruction(instruction.id, 'displayTimeScale', optimalScale);
+            }}
+            title="Auto-select optimal time scale"
+          >
+            <Clock className="w-3 h-3" />
+          </Button>
+        </div>
+      </TableCell>
+      {settings.showTiming && (
+        <TableCell className="font-mono text-sm">
+          {formatDuration(startTime)}
+        </TableCell>
+      )}
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            removeInstruction(instruction.id);
+          }}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function InstructionTable({ 
   instructions, 
   settings,
@@ -32,6 +266,8 @@ export function InstructionTable({
 }: InstructionTableProps) {
   // State to track editing values for duration inputs
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Initialize editing values when instructions change
   useEffect(() => {
@@ -66,18 +302,12 @@ export function InstructionTable({
     onInstructionsChange(instructions.filter(inst => inst.id !== id));
   };
 
-  // Use a generic type for value to avoid 'any'
-  const updateInstruction = <K extends keyof PulseInstruction>(
-    id: string,
-    field: K,
-    value: PulseInstruction[K]
-  ) => {
+  const updateInstruction = (id: string, field: keyof PulseInstruction, value: any) => {
     const updated = instructions.map(inst => {
       if (inst.id === id) {
         const updatedInst = { ...inst, [field]: value };
-        // Update length when duration changes
         if (field === 'duration') {
-          updatedInst.length = typeof value === 'number' ? value : inst.length;
+          updatedInst.length = value;
         }
         return updatedInst;
       }
@@ -111,6 +341,32 @@ export function InstructionTable({
     return scaledDuration.toFixed(scaledDuration < 1 ? 3 : 0);
   };
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (index: number) => {
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newInstructions = [...instructions];
+      const draggedInstruction = newInstructions[draggedIndex];
+      
+      // Remove the dragged item
+      newInstructions.splice(draggedIndex, 1);
+      
+      // Insert at the new position
+      const insertIndex = draggedIndex < dragOverIndex ? dragOverIndex - 1 : dragOverIndex;
+      newInstructions.splice(insertIndex, 0, draggedInstruction);
+      
+      onInstructionsChange(newInstructions);
+    }
+    
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
 
   return (
@@ -143,7 +399,7 @@ export function InstructionTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">#</TableHead>
+              <TableHead className="w-20">#</TableHead>
               <TableHead>Flags</TableHead>
               <TableHead>Opcode</TableHead>
               <TableHead>Data</TableHead>
@@ -160,166 +416,26 @@ export function InstructionTable({
                 .reduce((sum, inst) => sum + (inst.length || 0), 0);
               
               return (
-                <TableRow 
+                <DraggableRow
                   key={instruction.id}
-                  className={`cursor-pointer hover:bg-muted/50 ${
-                    selectedInstructionId === instruction.id ? 'bg-muted' : ''
-                  }`}
-                  onClick={() => onSelectInstruction(instruction.id)}
-                >
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    <FlagInput
-                      value={instruction.flags}
-                      onChange={(value) => updateInstruction(instruction.id, 'flags', value)}
-                      maxFlags={settings.flagCount}
-                      className="w-48"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={instruction.opcode}
-                      onValueChange={(value) => updateInstruction(
-                        instruction.id,
-                        'opcode',
-                        value as PulseInstruction['opcode']
-                      )}
-                    >
-                      <SelectTrigger onClick={(e) => e.stopPropagation()}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {OPCODE_OPTIONS.map(opcode => (
-                          <SelectItem key={opcode} value={opcode}>
-                            {opcode}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={instruction.data}
-                      onChange={(e) => updateInstruction(instruction.id, 'data', parseInt(e.target.value) || 0)}
-                      className="w-20"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="text"
-                      value={editingValues[instruction.id] || formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction))}
-                      onChange={(e) => {
-                        setEditingValues(prev => ({
-                          ...prev,
-                          [instruction.id]: e.target.value
-                        }));
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value.trim() === '') {
-                          // Reset to formatted value if empty
-                          const formattedValue = formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction));
-                          setEditingValues(prev => ({
-                            ...prev,
-                            [instruction.id]: formattedValue
-                          }));
-                          return;
-                        }
-                        
-                        const numericValue = parseFloat(value);
-                        if (isNaN(numericValue)) {
-                          // Reset to formatted value if invalid
-                          const formattedValue = formatDurationInScale(instruction.duration, getInstructionTimeScale(instruction));
-                          setEditingValues(prev => ({
-                            ...prev,
-                            [instruction.id]: formattedValue
-                          }));
-                          return;
-                        }
-                        
-                        const timeScale = getInstructionTimeScale(instruction);
-                        const durationNs = parseDurationFromScale(numericValue.toString(), timeScale);
-                        updateInstruction(instruction.id, 'duration', durationNs);
-                        
-                        // Update the editing value to the formatted version
-                        const formattedValue = formatDurationInScale(durationNs, timeScale);
-                        setEditingValues(prev => ({
-                          ...prev,
-                          [instruction.id]: formattedValue
-                        }));
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
-                      className="w-24"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Select
-                        value={getInstructionTimeScale(instruction)}
-                        onValueChange={(value) => updateInstruction(
-                          instruction.id,
-                          'displayTimeScale',
-                          value as PulseInstruction['displayTimeScale']
-                        )}
-                      >
-                        <SelectTrigger 
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-16"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ns">ns</SelectItem>
-                          <SelectItem value="μs">μs</SelectItem>
-                          <SelectItem value="ms">ms</SelectItem>
-                          <SelectItem value="s">s</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const optimalScale = getOptimalTimeScale(instruction.duration);
-                          updateInstruction(
-                            instruction.id,
-                            'displayTimeScale',
-                            optimalScale as PulseInstruction['displayTimeScale']
-                          );
-                        }}
-                        title="Auto-select optimal time scale"
-                      >
-                        <Clock className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  {settings.showTiming && (
-                    <TableCell className="font-mono text-sm">
-                      {formatDuration(startTime)}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeInstruction(instruction.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  instruction={instruction}
+                  index={index}
+                  startTime={startTime}
+                  selectedInstructionId={selectedInstructionId}
+                  settings={settings}
+                  onSelectInstruction={onSelectInstruction}
+                  updateInstruction={updateInstruction}
+                  removeInstruction={removeInstruction}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                  draggedIndex={draggedIndex}
+                  dragOverIndex={dragOverIndex}
+                  getInstructionTimeScale={getInstructionTimeScale}
+                  formatDuration={formatDuration}
+                  editingValues={editingValues}
+                  setEditingValues={setEditingValues}
+                />
               );
             })}
           </TableBody>
