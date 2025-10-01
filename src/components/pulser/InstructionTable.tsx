@@ -31,7 +31,7 @@ interface DraggableRowProps {
   selectedInstructionId?: string;
   settings: VisualizationSettings;
   onSelectInstruction: (id: string) => void;
-  updateInstruction: (id: string, field: keyof PulseInstruction, value: any) => void;
+  updateInstruction: (id: string, field: keyof PulseInstruction, value: string | number) => void;
   removeInstruction: (id: string) => void;
   onDragStart: (index: number) => void;
   onDragOver: (index: number) => void;
@@ -283,6 +283,7 @@ export function InstructionTable({
     if (Object.keys(newEditingValues).length > 0) {
       setEditingValues(prev => ({ ...prev, ...newEditingValues }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instructions]);
 
   const addInstruction = () => {
@@ -302,12 +303,12 @@ export function InstructionTable({
     onInstructionsChange(instructions.filter(inst => inst.id !== id));
   };
 
-  const updateInstruction = (id: string, field: keyof PulseInstruction, value: any) => {
+  const updateInstruction = (id: string, field: keyof PulseInstruction, value: string | number) => {
     const updated = instructions.map(inst => {
       if (inst.id === id) {
         const updatedInst = { ...inst, [field]: value };
         if (field === 'duration') {
-          updatedInst.length = value;
+          updatedInst.length = typeof value === 'string' ? parseFloat(value) || 0 : value;
         }
         return updatedInst;
       }

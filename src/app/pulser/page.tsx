@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, Play, Save, FolderOpen } from 'lucide-react';
+import { Download, FileText, Play, Save, FolderOpen, Code2 } from 'lucide-react';
 import { InstructionTable } from '@/components/pulser/InstructionTable';
 import { TimelineView } from '@/components/pulser/TimelineView';
 import { SettingsPanel } from '@/components/pulser/SettingsPanel';
@@ -14,6 +14,7 @@ import { ExportDialog } from '@/components/pulser/ExportDialog';
 import { ExamplePrograms } from '@/components/pulser/ExamplePrograms';
 import { PulseInstruction, VisualizationSettings, PulseProgram, TIME_SCALE_MULTIPLIERS } from '@/types/pulser/pulse';
 import { Toaster } from '@/components/ui/sonner';
+import { downloadPythonLibrary } from '@/lib/utils/pythonLibraryGenerator';
 
 export default function App() {
   const [programName, setProgramName] = useState('Untitled Program');
@@ -105,6 +106,15 @@ export default function App() {
               <Button variant="outline" size="sm">
                 <FolderOpen className="w-4 h-4 mr-2" />
                 Load
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadPythonLibrary(currentProgram)}
+              >
+                <Code2 className="w-4 h-4 mr-2" />
+                Library
               </Button>
             </div>
           </div>
