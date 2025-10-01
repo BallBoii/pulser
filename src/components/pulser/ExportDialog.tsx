@@ -74,6 +74,90 @@ with PulseBlaster(board=0, core_clock_MHz=500.0) as pb:
 `;
   };
 
+  const generateSpinAPI = () => {
+    // Convert duration to nanoseconds for SpinAPI (which expects nanoseconds)
+    const instructionsCode = program.instructions.map(inst => {
+      // Convert flags to hexadecimal format for SpinAPI
+      const flagsHex = `0x${inst.flags.toString(16).toUpperCase().padStart(6, '0')}`;
+      
+      // SpinAPI expects duration in nanoseconds
+      const durationNs = inst.duration;
+      
+      // Map opcodes to SpinAPI constants
+      const opcodeMapping: { [key: string]: string } = {
+        'CONTINUE': 'pb.CONTINUE',
+        'STOP': 'pb.STOP',
+        'LOOP': 'pb.LOOP',
+        'END_LOOP': 'pb.END_LOOP',
+        'JSR': 'pb.JSR',
+        'RTS': 'pb.RTS',
+        'BRANCH': 'pb.BRANCH',
+        'LONG_DELAY': 'pb.LONG_DELAY',
+        'WAIT': 'pb.WAIT'
+      };
+      
+      const spinApiOpcode = opcodeMapping[inst.opcode] || 'pb.CONTINUE';
+      
+      return `    pb.pb_inst_pbonly(${flagsHex}, ${spinApiOpcode}, ${inst.data}, ${durationNs} * pb.ns)`;
+    }).join('\n');
+
+    return `# Generated SpinAPI Python program
+# Program: ${program.name || 'Untitled'}
+# Generated on: ${new Date().toISOString()}
+# Total Instructions: ${program.instructions.length}
+
+import spinapi as pb
+import time
+
+# Initialize PulseBlaster
+board_num = 0  # Board number (usually 0)
+clock_freq = 500.0  # Clock frequency in MHz
+
+try:
+    # Initialize the board
+    if pb.pb_init() != 0:
+        raise Exception("Failed to initialize PulseBlaster board")
+    
+    # Set clock frequency
+    pb.pb_core_clock(clock_freq)
+    
+    # Program the pulse sequence
+    pb.pb_start_programming(pb.PULSE_PROGRAM)
+    
+    # Add instructions
+${instructionsCode}
+    
+    # Stop programming
+    pb.pb_stop_programming()
+    
+    # Start the pulse program
+    pb.pb_start()
+    
+    print("Pulse program started successfully")
+    print("Press Ctrl+C to stop the program...")
+    
+    # Wait for user interrupt or run for specific time
+    try:
+        while True:
+            time.sleep(1)
+            status = pb.pb_read_status()
+            if status & pb.STATUS_STOPPED:
+                print("Program completed")
+                break
+    except KeyboardInterrupt:
+        print("\\nStopping pulse program...")
+        pb.pb_stop()
+        
+except Exception as e:
+    print(f"Error: {e}")
+    
+finally:
+    # Clean up
+    pb.pb_close()
+    print("PulseBlaster closed")
+`;
+  };
+
   const generatePulseBlasterInterpreter = () => {
     // First pass: identify which instructions need labels (branch/JSR targets)
     const needsLabel = new Set<number>();
@@ -193,6 +277,7 @@ ${instructionsCode}`;
 
   const jsonContent = generateJSON();
   const pythonContent = generatePython();
+  const spinApiContent = generateSpinAPI();
   const interpreterContent = generatePulseBlasterInterpreter();
 
   return (
@@ -206,9 +291,10 @@ ${instructionsCode}`;
         </DialogHeader>
         
         <Tabs defaultValue="json" className="w-full overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="json">JSON Format</TabsTrigger>
             <TabsTrigger value="python">Python Script</TabsTrigger>
+            <TabsTrigger value="spinapi">SpinAPI Python</TabsTrigger>
             <TabsTrigger value="interpreter">PB Interpreter</TabsTrigger>
           </TabsList>
           
@@ -270,6 +356,38 @@ ${instructionsCode}`;
             </div>
             <Textarea
               value={pythonContent}
+              readOnly
+              className="font-mono text-sm h-96 resize-none overflow-auto whitespace-nowrap"
+              style={{ wordBreak: 'keep-all' }}
+            />
+          </TabsContent>
+          
+          <TabsContent value="spinapi" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Export as SpinAPI Python script for SpinCore PulseBlaster hardware
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(spinApiContent, 'SpinAPI Python')}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadFile(spinApiContent, `${program.name || 'pulse_program'}_spinapi.py`)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+            <Textarea
+              value={spinApiContent}
               readOnly
               className="font-mono text-sm h-96 resize-none overflow-auto whitespace-nowrap"
               style={{ wordBreak: 'keep-all' }}
