@@ -39,7 +39,22 @@ export function ExportDialog({ program, children }: ExportDialogProps) {
         flagsOutput = `"${inst.flags}"`;
       }
 
-      return `    PBInstruction(flags=${flagsOutput}, opcode="${inst.opcode}", data=${inst.data}, duration=${inst.duration}, units="ns")`;
+      // Determine appropriate duration and units
+      let duration: number;
+      let units: string;
+      
+      if (inst.duration >= 1000000) {
+        duration = Math.round(inst.duration / 1000000);
+        units = "ms";
+      } else if (inst.duration >= 1000) {
+        duration = Math.round(inst.duration / 1000);
+        units = "us";
+      } else {
+        duration = inst.duration;
+        units = "ns";
+      }
+
+      return `    PBInstruction(flags=${flagsOutput}, opcode="${inst.opcode}", data=${inst.data}, duration=${duration}, units="${units}")`;
     }).join(',\n');
 
     return `# Generated pulse program
