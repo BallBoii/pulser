@@ -69,6 +69,7 @@ ${instructionsCode}
 with PulseBlaster(board=0, core_clock_MHz=500.0) as pb:
     pb.program_pulse_program(instructions)
     pb.start()
+    input("Press Enter to stop the program...")
     # Add your timing logic here
     pb.stop()
 `;
@@ -141,9 +142,7 @@ ${instructionsCode}
         while True:
             time.sleep(1)
             status = pb.pb_read_status()
-            if status & pb.STATUS_STOPPED:
-                print("Program completed")
-                break
+            print(status)
     except KeyboardInterrupt:
         print("\\nStopping pulse program...")
         pb.pb_stop()
